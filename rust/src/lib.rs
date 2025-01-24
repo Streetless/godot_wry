@@ -7,7 +7,7 @@ use godot::prelude::*;
 use godot::classes::{Control, IControl, IDisplayServer, ISprite2D, Os, ProjectSettings, Sprite2D};
 use http::header::CONTENT_TYPE;
 use http::Response;
-use wry::{RGBA, WebViewBuilder, Rect, WebViewAttributes};
+use wry::{Rect, WebViewAttributes, WebViewBuilder, WebViewBuilderExtWindows, RGBA};
 use wry::dpi::{LogicalPosition, LogicalSize, PhysicalPosition, PhysicalSize};
 use wry::http::{HeaderMap, Request};
 use crate::godot_window::GodotWindow;
@@ -40,6 +40,8 @@ struct WebView {
     #[export]
     user_agent: GString,
     #[export]
+    theme: GString,
+    #[export]
     zoom_hotkeys: bool,
     #[export]
     clipboard: bool,
@@ -63,10 +65,11 @@ impl IControl for WebView {
             devtools: true,
             headers: Dictionary::new(),
             user_agent: "".into(),
+            theme: "dark".into(),
             zoom_hotkeys: false,
             clipboard: true,
             incognito: false,
-            focused: true,
+            focused: true
         }
     }
 
@@ -100,7 +103,12 @@ impl IControl for WebView {
             })
             .with_custom_protocol(
                 "res".into(), move |_webview_id, request| get_res_response(request),
-            );
+            )
+            .with_theme(match &String::from_iter(self.theme.chars().clone())[..] {
+                "light" => wry::Theme::Light,
+                "dark" => wry::Theme::Dark,
+                _ => wry::Theme::Auto
+            });
 
         if !self.url.is_empty() && !self.html.is_empty() {
             godot_error!("You have entered both a URL and HTML code. You may only enter one at a time.")
@@ -148,5 +156,31 @@ impl WebView {
             };
             let _ = webview.set_bounds(rect);
         }
+    }
+
+    #[func]
+    fn focus(&self) {
+        if let Some(webview) = &self.webview {
+            webview.focus().expect("oops")
+        }
+    }
+
+    #[func]
+    fn focus_parent(&self) {
+        if let Some(webview) = &self.webview {
+            let _ = webview.focus_parent();
+        }
+    }
+
+    #[func]
+    fn set_visible(&self, visible: bool) {
+        if let Some(webview) = &self.webview {
+            webview.set_visible(visible).expect("can't set visibility");
+        }
+    }
+
+    #[func]
+    fn force_free(&mut self) {
+        self.webview.take();
     }
 }
