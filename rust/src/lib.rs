@@ -7,7 +7,7 @@ use godot::prelude::*;
 use godot::classes::{Control, IControl, IDisplayServer, ISprite2D, Os, ProjectSettings, Sprite2D};
 use http::header::CONTENT_TYPE;
 use http::Response;
-use wry::{Rect, WebViewAttributes, WebViewBuilder, WebViewBuilderExtWindows, RGBA};
+use wry::{Rect, WebViewAttributes, WebViewBuilder, WebViewBuilderExtWindows, WebContext, RGBA};
 use wry::dpi::{LogicalPosition, LogicalSize, PhysicalPosition, PhysicalSize};
 use wry::http::{HeaderMap, Request};
 use crate::godot_window::GodotWindow;
@@ -22,6 +22,7 @@ unsafe impl ExtensionLibrary for GodotWRY {}
 #[class(base=Control)]
 struct WebView {
     base: Base<Control>,
+    web_context: WebContext,
     webview: Option<wry::WebView>,
     #[export]
     full_window_size: bool,
@@ -57,6 +58,7 @@ impl IControl for WebView {
         Self {
             base,
             webview: None,
+            web_context: WebContext::new(std::env::home_dir()),
             full_window_size: true,
             url: "https://github.com/doceazedo/godot_wry".into(),
             html: "".into(),
@@ -89,6 +91,7 @@ impl IControl for WebView {
             html: if self.url.is_empty() { Some(String::from(&self.html)) } else { None },
             transparent: self.transparent,
             devtools: self.devtools,
+            context: Some(&mut self.web_context),
             // headers: Some(HeaderMap::try_from(self.headers.iter_shared().typed::<GString, Variant>()).unwrap_or_default()),
             user_agent: Some(String::from(&self.user_agent)),
             zoom_hotkeys_enabled: self.zoom_hotkeys,
